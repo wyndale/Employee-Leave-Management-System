@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/Database.php';
 require_once __DIR__ . '/Session.php';
 
 class Auth {
     private $pdo;
 
     public function __construct() {
-        $this->pdo = Database::getInstance();
+        $this->pdo = Database::getInstance()->getConnection();
     }
 
     public function login($username, $password) {

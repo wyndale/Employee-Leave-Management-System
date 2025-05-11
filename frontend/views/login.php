@@ -34,13 +34,13 @@ Session::set('message_type', null);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Employee Leave Management System</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <title>Login | Leave Request</title>
+    <link rel="stylesheet" href="../assets/css/login.css">
 </head>
 <body>
     <div class="main-container">
         <div class="illustration-container">
-            <img src="../assets/img/login-ill.png" alt="Professional Employee Illustration" class="illustration">
+            <img src="../assets/img/employees-ill.png" alt="Professional Employee Illustration" class="illustration">
         </div>
         <div class="form-container">
             <div class="login-card">
@@ -75,5 +75,6 @@ Session::set('message_type', null);
             </div>
         </div>
     </div>
+    <script src="../assets/js/script.js"></script>
 </body>
 </html>
