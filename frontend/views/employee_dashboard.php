@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../backend/src/Database.php';
 
 // Ensure user is authenticated and is an employee
 if (!Session::isLoggedIn() || Session::getRole() !== 'employee') {
-    redirect('/frontend/views/login.php', 'Please log in as an employee.', 'error');
+    redirect('/frontend/views/login.php', 'Your session has expired. Please log in again to continue.', 'error');
 }
 
 // Initialize database connection using the Singleton pattern

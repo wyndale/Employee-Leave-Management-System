@@ -31,6 +31,7 @@ body {
     align-items: center;
     background: rgba(255, 255, 255, 1);
     overflow: hidden;
+    z-index: 1; /* Ensure illustration stays below modal */
 }
 
 /* Animated Shapes for Left Side */
@@ -44,6 +45,7 @@ body {
     top: 15%;
     left: 10%;
     animation: float 8s infinite ease-in-out;
+    z-index: 0;
 }
 
 .illustration-container::after {
@@ -56,6 +58,7 @@ body {
     bottom: 25%;
     left: 20%;
     animation: rotateFade 12s infinite ease-in-out;
+    z-index: 0;
 }
 
 .illustration-container .shape-1 {
@@ -68,6 +71,7 @@ body {
     top: 50%;
     left: 40%;
     animation: fade 10s infinite ease-in-out;
+    z-index: 0;
 }
 
 .illustration-container .shape-2 {
@@ -80,6 +84,7 @@ body {
     bottom: 10%;
     left: 15%;
     animation: float 6s infinite ease-in-out;
+    z-index: 0;
 }
 
 .illustration {
@@ -177,7 +182,7 @@ body {
     text-align: center;
     transition: transform 0.5s ease, box-shadow 0.5s ease;
     position: relative;
-    z-index: 1;
+    z-index: 2; /* Slightly higher than illustration */
 }
 
 .login-card:hover {
@@ -201,11 +206,12 @@ body {
 .input-group {
     position: relative;
     margin-bottom: 25px;
+    z-index: 3; /* Ensure input is above card but below modal */
 }
 
 .input-group input {
     width: 100%;
-    padding: 12px 15px 12px 15px;
+    padding: 12px 40px 12px 15px; /* Increased right padding to accommodate the eye icon */
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-size: 16px;
@@ -213,6 +219,12 @@ body {
     background: #fff;
     outline: none;
     transition: border-color 0.3s;
+    box-sizing: border-box;
+}
+
+.input-group input:focus,
+.input-group input.filled {
+    border-color: rgb(46, 115, 194);
 }
 
 .input-group label {
@@ -235,9 +247,24 @@ body {
     padding: 0 5px;
 }
 
-.input-group input:focus,
-.input-group input.filled {
-    border-color: rgb(46, 115, 194);
+.input-group .password-toggle {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+    font-size: 16px;
+    z-index: 4;
+}
+
+.input-group .password-toggle:hover {
+    color: rgb(46, 115, 194);
+}
+
+/* Ensure space for the error message without overlapping the input */
+.input-group:has(.error-message) {
+    margin-bottom: 50px; /* Increased margin to accommodate the error message */
 }
 
 .options {
@@ -318,6 +345,13 @@ button:hover {
     box-shadow: 0 4px 8px rgba(64, 64, 64, 0.735);
 }
 
+button:disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
 .links {
     margin-top: 20px;
     text-align: right;
@@ -342,6 +376,202 @@ button:hover {
     margin-bottom: 20px;
     border-radius: 5px;
     font-size: 14px;
+}
+
+.message.success {
+    background: #e7f3e7;
+    color: #2e7d32;
+}
+
+.message.error {
+    background: #fdeded;
+    color: #d32f2f;
+}
+
+/* Password Modal Styles */
+.password-modal {
+    display: none;
+    position: fixed; /* Use fixed positioning relative to viewport */
+    z-index: 1000; /* High z-index to appear above all elements */
+}
+
+.modal-content {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    width: 250px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    animation: slideIn 0.3s ease-out;
+    text-align: left;
+    position: relative;
+    z-index: 1000; /* Ensure content is above all */
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.modal-content h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.modal-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.requirement {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    max-width: 220px;
+}
+
+.requirement .icon {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 10px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.requirement.met .icon {
+    background: #28a745;
+}
+
+.requirement.met .icon::after {
+    content: '✔';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 8px;
+    color: #fff;
+}
+
+.strength-bar-container {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.strength-bar-container label {
+    font-size: 12px;
+    color: #666;
+    display: block;
+    margin-top: 5px;
+}
+
+.strength-bar {
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    transition: width 0.3s ease;
+    width: 100%;
+    max-width: 220px;
+    margin: 0 auto;
+}
+
+.strength-bar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.strength-bar.weak::before {
+    width: 33%;
+    background: linear-gradient(90deg, #ff4d4f, #ff7875);
+}
+
+.strength-bar.medium::before {
+    width: 66%;
+    background: linear-gradient(90deg, #ffeb3b, #ffd54f);
+}
+
+.strength-bar.strong::before {
+    width: 100%;
+    background: linear-gradient(90deg, #28a745, #52c41a);
+}
+
+.strength-text {
+    display: block;
+    font-size: 12px;
+    margin-top: 5px;
+    color: #666;
+    text-align: center;
+}
+
+/* Modal Arrow */
+.modal-arrow {
+    position: absolute;
+    right: -15px; /* Position to the right of modal */
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 20px;
+    height: 20px;
+    background: #c1ddf7;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 3px 5px 10px rgb(0, 0, 0);
+    z-index: 1001; /* Slightly higher than modal content */
+    clip-path: polygon(0 0, 100% 0, 100% 100%); /* Triangular shape pointing right */
+}
+
+/* Elegant Error Message for Password Mismatch */
+.error-message {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #d32f2f;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fff;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: opacity 0.3s ease, transform 0.2s ease;
+    transform: translateY(0);
+    position: absolute; /* Position absolutely to prevent layout shift */
+    top: 100%; /* Place below the input */
+    left: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.error-message::before {
+    content: '⚠';
+    margin-right: 8px;
+    font-size: 14px;
+    color: #d32f2f;
+}
+
+.error-message:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsive Design */
@@ -371,13 +601,15 @@ button:hover {
     .form-container {
         flex: none;
         width: 100%;
-        height: 35vh;
+        height: auto;
         padding: 5px;
         overflow-y: auto;
     }
     .login-card {
         padding: 10px;
         margin: 5px 0;
+        max-width: 100%;
+        position: relative;
     }
     .login-card h2 {
         font-size: 24px;
@@ -391,7 +623,7 @@ button:hover {
         margin-bottom: 15px;
     }
     .input-group input {
-        padding: 10px 12px;
+        padding: 10px 35px 10px 12px; /* Adjusted padding for mobile */
         font-size: 14px;
     }
     .input-group label {
@@ -401,6 +633,13 @@ button:hover {
     .input-group input.filled + label {
         top: -8px;
         font-size: 10px;
+    }
+    .input-group .password-toggle {
+        right: 12px;
+        font-size: 14px;
+    }
+    .input-group:has(.error-message) {
+        margin-bottom: 40px; /* Adjusted for mobile */
     }
     .options {
         margin-bottom: 15px;
@@ -421,5 +660,60 @@ button:hover {
     }
     .links a {
         font-size: 12px;
+    }
+    .password-modal {
+        position: absolute;
+        width: 100%;
+        left: 0;
+        z-index: 1000;
+    }
+    .modal-content {
+        width: 100%;
+        padding: 15px;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .modal-arrow {
+        top: -15px; /* Position above modal */
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 15px;
+        height: 15px;
+        clip-path: polygon(0 0, 100% 0, 0 100%); /* Triangular shape pointing up */
+        box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .requirement {
+        font-size: 11px;
+        margin-bottom: 8px;
+        max-width: 260px;
+    }
+    .requirement .icon {
+        width: 10px;
+        height: 10px;
+        margin-right: 8px;
+    }
+    .requirement.met .icon::after {
+        font-size: 7px;
+    }
+    .strength-bar {
+        height: 5px;
+        max-width: 260px;
+    }
+    .strength-bar-container label {
+        font-size: 10px;
+        margin-top: 5px;
+    }
+    .strength-text {
+        font-size: 10px;
+    }
+    .error-message {
+        font-size: 11px;
+        padding: 6px 10px;
+        margin-top: 6px;
+    }
+    .error-message::before {
+        font-size: 12px;
+        margin-right: 6px;
     }
 }
