@@ -1,0 +1,183 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background: #fff;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 20px;
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 800px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+header h1 {
+    font-size: 24px;
+    color: #333;
+    font-weight: 700;
+}
+
+.logout-btn {
+    padding: 8px 16px;
+    background: linear-gradient(45deg, rgb(58, 141, 231), rgb(46, 115, 194));
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.logout-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+main section {
+    margin-bottom: 30px;
+}
+
+main h2 {
+    font-size: 20px;
+    color: rgb(46, 115, 194);
+    margin-bottom: 15px;
+}
+
+ul {
+    list-style: none;
+}
+
+ul li {
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    color: #444;
+}
+
+.leave-request-form .input-group {
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.leave-request-form input,
+.leave-request-form textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.leave-request-form input:focus,
+.leave-request-form textarea:focus {
+    border-color: rgb(46, 115, 194);
+}
+
+.leave-request-form label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 12px;
+    color: #999;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.leave-request-form input:focus + label,
+.leave-request-form textarea:focus + label {
+    top: -10px;
+    font-size: 10px;
+    color: rgb(46, 115, 194);
+    background: #fff;
+    padding: 0 5px;
+}
+
+button {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(45deg, rgb(58, 141, 231), rgb(46, 115, 194));
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.message {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.message.success {
+    background: #e7f3e7;
+    color: #2e7d32;
+}
+
+.message.error {
+    background: #fdeded;
+    color: #d32f2f;
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 10px;
+    }
+    header h1 {
+        font-size: 20px;
+    }
+    .logout-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    main h2 {
+        font-size: 18px;
+    }
+    ul li {
+        font-size: 14px;
+    }
+    .leave-request-form .input-group {
+        margin-bottom: 10px;
+    }
+    .leave-request-form input,
+    .leave-request-form textarea {
+        font-size: 12px;
+    }
+    button {
+        padding: 10px;
+        font-size: 14px;
+    }
+}
