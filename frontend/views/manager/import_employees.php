@@ -1,13 +1,13 @@
 <?php
-require_once __DIR__ . '/../../../backend/src/Auth.php';
+require_once __DIR__ . '/../../models/Auth.php';
 require_once __DIR__ . '/../../../backend/src/Session.php';
 require_once __DIR__ . '/../../../backend/utils/redirect.php';
 require_once __DIR__ . '/../../../backend/src/Database.php';
 
-// Ensure user is authenticated and is a manager
-if (!Session::isLoggedIn() || Session::getRole() !== 'manager') {
-    redirect('/frontend/views/login.php', 'Please log in as a manager to import employees.', 'error');
-}
+// // Ensure user is authenticated and is a manager
+// if (!Session::isLoggedIn() || Session::getRole() !== 'manager') {
+//     redirect('/frontend/views/login.php', 'Please log in as a manager to import employees.', 'error');
+// }
 
 // Initialize database connection
 $db = Database::getInstance();

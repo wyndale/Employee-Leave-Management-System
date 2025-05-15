@@ -1,50 +1,80 @@
 <?php
-require_once __DIR__ . '/../../backend/src/Session.php';
 require_once __DIR__ . '/../../frontend/models/Auth.php';
 require_once __DIR__ . '/../../frontend/models/LeaveModel.php';
-require_once __DIR__ . '/../../backend/utils/redirect.php';
+require_once __DIR__ . '/../src/Session.php';
+require_once __DIR__ . '/../src/Database.php';
+require_once __DIR__ . '/../utils/redirect.php';
 
 class EmployeeDashboardController {
     private $auth;
     private $leaveModel;
-    private $baseUrl = '/employee-leave-management-system';
+    private $pdo;
 
     public function __construct() {
-        Session::start();
         $this->auth = new Auth();
         $this->leaveModel = new LeaveModel();
-        if (!Session::isLoggedIn() || Session::getRole() !== 'employee') {
-            redirect($this->baseUrl . '/login', 'Unauthorized access.', 'error');
-        }
+        $this->pdo = Database::getInstance()->getConnection();
     }
 
-    public function handleDashboard() {
-        $userId = Session::get('user_id');
-        $firstName = Session::get('first_name');
-        $lastName = Session::get('last_name');
-        $leaveBalances = $this->leaveModel->getLeaveBalance($userId);
-        $pendingRequests = $this->leaveModel->getPendingLeaveRequests($userId);
+    private function logAudit($employeeId, $action, $details) {
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+        $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+        $stmt = $this->pdo->prepare("INSERT INTO audit_logs (employee_id, action, details, ip_address, user_agent, created_at) VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$employeeId, $action, $details, $ipAddress, $userAgent]);
+    }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Handle leave request submission (PRG pattern)
-            $startDate = filter_input(INPUT_POST, 'start_date', FILTER_SANITIZE_STRING);
-            $endDate = filter_input(INPUT_POST, 'end_date', FILTER_SANITIZE_STRING);
-            $reason = filter_input(INPUT_POST, 'reason', FILTER_SANITIZE_STRING);
+    public function getEmployee($employeeId) {
+        return $this->auth->getEmployeeById($employeeId);
+    }
 
-            if ($startDate && $endDate && $reason) {
-                if ($this->leaveModel->submitLeaveRequest($userId, $startDate, $endDate, $reason)) {
-                    redirect($this->baseUrl . '/employee-dashboard', 'Leave request submitted successfully!', 'success');
-                } else {
-                    redirect($this->baseUrl . '/employee-dashboard', 'Failed to submit leave request. Please try again.', 'error');
-                }
-            }
+    public function getLeaveRequests($employeeId) {
+        return $this->leaveModel->getLeaveRequestsByEmployeeId($employeeId);
+    }
+
+    public function getLeaveBalances($employeeId) {
+        return $this->leaveModel->getLeaveBalancesByEmployeeId($employeeId);
+    }
+
+    public function getNotifications($employeeId) {
+        $stmt = $this->pdo->prepare("SELECT notification_id, message, created_at FROM notifications WHERE employee_id = ? ORDER BY created_at DESC");
+        $stmt->execute([$employeeId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getUnreadNotificationCount($employeeId) {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM notifications WHERE employee_id = ? AND status = 'pending'");
+        $stmt->execute([$employeeId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function getTotalRequestsForYear($employeeId, $year) {
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM leave_requests WHERE employee_id = ? AND YEAR(created_at) = ?");
+        $stmt->execute([$employeeId, $year]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function markNotificationsRead() {
+        header('Content-Type: application/json');
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+            exit;
         }
 
-        return [
-            'firstName' => htmlspecialchars($firstName),
-            'lastName' => htmlspecialchars($lastName),
-            'leaveBalances' => $leaveBalances,
-            'pendingRequests' => $pendingRequests
-        ];
+        $employeeId = Session::get('user_id');
+        $stmt = $this->pdo->prepare("UPDATE notifications SET status = 'read' WHERE employee_id = ? AND status = 'pending'");
+        $stmt->execute([$employeeId]);
+
+        echo json_encode(['success' => true, 'message' => 'Notifications marked as read']);
+        exit;
     }
 }
+
+// Handle AJAX requests
+if (isset($_GET['action'])) {
+    $controller = new EmployeeDashboardController();
+    if ($_GET['action'] === 'mark_notifications_read') {
+        $controller->markNotificationsRead();
+    }
+}
+?>

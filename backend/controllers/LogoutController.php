@@ -14,6 +14,6 @@ class LogoutController {
 
     public function handleLogout() {
         $this->auth->logout();
-        redirect($this->baseUrl . '/frontend/views/login.php', 'You have been logged out.', 'success');
+        redirect($this->baseUrl . '/frontend/public/login.php', 'You have been logged out.', 'success');
     }
 }

@@ -109,4 +109,17 @@ class Auth {
             setcookie('remember_token', '', time() - 3600, '/', '', true, true);
         }
     }
+
+    public function getEmployeeById($employeeId) {
+        $stmt = $this->pdo->prepare("SELECT employee_id, first_name, last_name, email, role FROM employees WHERE employee_id = ?");
+        $stmt->execute([$employeeId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getManagerId($employeeId) {
+        $stmt = $this->pdo->prepare("SELECT manager_id FROM employees WHERE employee_id = ?");
+        $stmt->execute([$employeeId]);
+        return $stmt->fetchColumn();
+    }
 }
+?>
