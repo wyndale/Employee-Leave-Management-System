@@ -71,5 +71,66 @@ class LeaveModel {
         ");
         $stmt->execute([$newBalance, $employeeId, $leaveTypeId]);
     }
+
+    public function getLeaveHistory($employeeId, $status = null, $startDate = null, $endDate = null, $leaveType = null, $page = 1, $perPage = 10) {
+        $offset = ($page - 1) * $perPage;
+        $query = "
+            SELECT lr.*, lt.name as leave_type_name
+            FROM leave_requests lr
+            LEFT JOIN leave_types lt ON lr.leave_type_id = lt.leave_type_id
+            WHERE lr.employee_id = ?
+        ";
+        $params = [$employeeId];
+
+        if ($status) {
+            $query .= " AND lr.status = ?";
+            $params[] = $status;
+        }
+        if ($startDate) {
+            $query .= " AND lr.start_date >= ?";
+            $params[] = $startDate;
+        }
+        if ($endDate) {
+            $query .= " AND lr.end_date <= ?";
+            $params[] = $endDate;
+        }
+        if ($leaveType) {
+            $query .= " AND lt.name = ?";
+            $params[] = $leaveType;
+        }
+
+        $query .= " ORDER BY lr.created_at DESC LIMIT ? OFFSET ?";
+        $params[] = (int)$perPage;
+        $params[] = (int)$offset;
+
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTotalLeaveHistoryCount($employeeId, $status = null, $startDate = null, $endDate = null, $leaveType = null) {
+        $query = "SELECT COUNT(*) FROM leave_requests lr LEFT JOIN leave_types lt ON lr.leave_type_id = lt.leave_type_id WHERE lr.employee_id = ?";
+        $params = [$employeeId];
+
+        if ($status) {
+            $query .= " AND lr.status = ?";
+            $params[] = $status;
+        }
+        if ($startDate) {
+            $query .= " AND lr.start_date >= ?";
+            $params[] = $startDate;
+        }
+        if ($endDate) {
+            $query .= " AND lr.end_date <= ?";
+            $params[] = $endDate;
+        }
+        if ($leaveType) {
+            $query .= " AND lt.name = ?";
+            $params[] = $leaveType;
+        }
+
+        $stmt = $this->db->prepare($query);
+        $stmt->execute($params);
+        return (int)$stmt->fetchColumn();
+    }
 }
-?>

@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../../backend/src/Database.php';
-require_once __DIR__ . '/../../backend/src/Session.php';
+require_once __DIR__ . '/../src/Database.php';
+require_once __DIR__ . '/../src/Session.php';
 
 class Auth {
     private $pdo;

@@ -1,20 +1,9 @@
 <?php
-require_once __DIR__ . '/../../backend/controllers/EmployeeDashboardController.php';
 require_once __DIR__ . '/../../backend/src/Session.php';
-require_once __DIR__ . '/../../backend/utils/redirect.php';
+require_once __DIR__ . '/../../backend/controllers/EmployeeDashboardController.php';
 
 Session::start();
-Session::validate();
-
-// Check if user is logged in and is an employee
-if (!Session::isLoggedIn() || Session::getRole() !== 'employee') {
-    redirect('../frontend/public/login.php', 'Please log in to access this page.', 'error');
-}
-
-// Generate CSRF token if not set
-if (!Session::get('csrf_token')) {
-    Session::set('csrf_token', bin2hex(random_bytes(32)));
-}
+Session::requireLogin();
 
 $controller = new EmployeeDashboardController();
 $employee = $controller->getEmployee(Session::get('user_id'));
@@ -23,9 +12,8 @@ $leaveBalances = $controller->getLeaveBalances(Session::get('user_id'));
 $notifications = $controller->getNotifications(Session::get('user_id'));
 $unreadCount = $controller->getUnreadNotificationCount(Session::get('user_id'));
 
-// Time-based greeting (12:10 PM PST, May 15, 2025)
-$hour = (int)date('H', strtotime('2025-05-15 12:10:00 -0700')); // PST
-$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
+// Static greeting aligned with the system's purpose
+$greeting = "Hi, " . htmlspecialchars($employee['first_name'] ?? 'User') . "! Ready to manage your leave requests?";
 
 $message = Session::get('message');
 $messageType = Session::get('message_type');
@@ -53,13 +41,13 @@ Session::set('message_type', null);
                 </button>
             </div>
             <nav class="sidebar-nav">
-                <a href="#dashboard" class="sidebar-link active">
+                <a href="employee_dashboard.php" class="sidebar-link active">
                     <i class="fas fa-home"></i><span class="sidebar-text">Dashboard</span>
                 </a>
-                <a href="#leave-submission" class="sidebar-link">
+                <a href="leave_submission.php" class="sidebar-link">
                     <i class="fas fa-file-signature"></i><span class="sidebar-text">Leave Submission</span>
                 </a>
-                <a href="#leave-history" class="sidebar-link">
+                <a href="leave_history.php" class="sidebar-link">
                     <i class="fas fa-folder-open"></i><span class="sidebar-text">Leave History</span>
                 </a>
                 <a href="#settings" class="sidebar-link sidebar-link-bottom">
@@ -75,7 +63,7 @@ Session::set('message_type', null);
                 <div class="header-center">
                     <div class="search-bar">
                         <i class="fas fa-search search-icon"></i>
-                        <form action="../backend/controllers/SearchController.php" method="GET" class="search-form">
+                        <form action="/employee-leave-management-system/backend/controllers/SearchController.php" method="GET" class="search-form">
                             <input type="text" id="search-input" name="query" placeholder="Search..." class="search-input">
                         </form>
                     </div>
@@ -93,13 +81,14 @@ Session::set('message_type', null);
                                 <h3>Notifications</h3>
                             </div>
                             <div id="notification-list">
-                                <?php foreach ($notifications as $notification): ?>
-                                    <div class="notification-item" data-id="<?php echo $notification['notification_id']; ?>">
-                                        <p><?php echo htmlspecialchars($notification['message']); ?></p>
-                                        <span class="notification-time"><?php echo date('d M Y, H:i', strtotime($notification['created_at'])); ?></span>
-                                    </div>
-                                <?php endforeach; ?>
-                                <?php if (empty($notifications)): ?>
+                                <?php if (!empty($notifications)): ?>
+                                    <?php foreach ($notifications as $notification): ?>
+                                        <div class="notification-item" data-id="<?php echo $notification['notification_id']; ?>">
+                                            <p><?php echo htmlspecialchars($notification['message']); ?></p>
+                                            <span class="notification-time"><?php echo date('d M Y, H:i', strtotime($notification['created_at'])); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
                                     <p class="no-notifications">No notifications available.</p>
                                 <?php endif; ?>
                             </div>
@@ -107,12 +96,12 @@ Session::set('message_type', null);
                     </div>
                     <div class="profile-container">
                         <button id="profile-toggle" class="profile-button">
-                            <img src="../frontend/assets/img/profile.png" alt="Profile" class="profile-image">
-                            <span class="profile-name"><?php echo htmlspecialchars($employee['first_name']); ?></span>
+                            <img src="/employee-leave-management-system/frontend/assets/img/profile.png" alt="Profile" class="profile-image">
+                            <span class="profile-name"><?php echo htmlspecialchars($employee['first_name'] ?? 'User'); ?></span>
                         </button>
                         <div id="profile-dropdown" class="profile-dropdown background-white shadow hidden">
-                            <a href="../views/account_settings.php" class="dropdown-item">Account Settings</a>
-                            <a href="../backend/controllers/LogoutController.php" class="dropdown-item">Logout</a>
+                            <a href="/employee-leave-management-system/views/account_settings.php" class="dropdown-item">Account Settings</a>
+                            <a href="/employee-leave-management-system/backend/controllers/LogoutController.php?action=logout" class="dropdown-item">Logout</a>
                         </div>
                     </div>
                 </div>
@@ -132,75 +121,103 @@ Session::set('message_type', null);
                 <?php endif; ?>
             </div>
 
-            <!-- Dashboard Content -->
+            <!-- Main -->
             <main class="main padding-20">
-                <!-- Greeting Text -->
                 <div class="greeting-text">
-                    <h1 class="greeting-title"><?php echo "Good afternoon, " . htmlspecialchars($employee['first_name']) . "! Ready to tackle today with a fresh start?"; ?></h1>
+                    <h1 class="greeting-title"><?php echo $greeting; ?></h1>
                 </div>
 
-                <!-- Key Info Cards -->
                 <div class="card-container">
-                    <!-- First Row -->
                     <div class="card-grid card-grid-top">
-                        <a href="../views/leave_submission.php" class="card-link-wrapper">
-                            <div class="card card-highlight shadow">
+                        <a href="leave_submission.php" class="card-link-wrapper">
+                            <div class="card card-highlight">
                                 <div class="card-icon card-icon-large">
-                                    <i class="fas fa-paper-plane"></i>
+                                    <i class="fas fa-calendar-plus"></i>
                                 </div>
                                 <div class="card-content">
-                                    <h3 class="card-title card-title-white">Submit a Leave Request</h3>
-                                    <p class="card-value card-value-white">Request Now</p>
+                                    <div class="card-title card-title-white">Submit a Leave Request</div>
+                                    <div class="card-value card-value-white">Request Now</div>
                                 </div>
                             </div>
                         </a>
-                        <div class="card background-white shadow">
+
+                        <div class="card">
                             <div class="card-icon">
-                                <i class="fas fa-clock"></i>
+                                <i class="fas fa-calendar-alt"></i>
                             </div>
                             <div class="card-content">
-                                <h3 class="card-title">Remaining Leave Days</h3>
-                                <p class="card-value"><?php echo array_sum(array_column($leaveBalances, 'balance')); ?> Days</p>
+                                <div class="card-title">Remaining Leave Days</div>
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr>
+                                            <th style="text-align: left; padding: 0.5rem; font-weight: 500; color: #6b7280;">Leave Type</th>
+                                            <th style="text-align: right; padding: 0.5rem; font-weight: 500; color: #6b7280;">Days</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php if (!empty($leaveBalances)): ?>
+                                            <?php foreach ($leaveBalances as $balance): ?>
+                                                <tr>
+                                                    <td style="text-align: left; padding: 0.5rem; color: #1f2937;"><?php echo htmlspecialchars(ucfirst($balance['name'])); ?></td>
+                                                    <td style="text-align: right; padding: 0.5rem; color: #1f2937;"><?php echo htmlspecialchars($balance['balance']); ?> Days</td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <tr>
+                                                <td colspan="2" style="text-align: center; padding: 0.5rem; color: #6b7280;">No leave balances available.</td>
+                                            </tr>
+                                        <?php endif; ?>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Second Row -->
                     <div class="card-grid card-grid-bottom">
-                        <a href="../views/pending_requests.php" class="card-link-wrapper">
-                            <div class="card background-white shadow">
+                        <a href="leave_history.php?status=pending" class="card-link-wrapper">
+                            <div class="card">
                                 <div class="card-icon">
                                     <i class="fas fa-hourglass-half"></i>
                                 </div>
                                 <div class="card-content">
-                                    <h3 class="card-title">Pending Requests</h3>
-                                    <p class="card-value"><?php echo count(array_filter($leaveRequests, fn($req) => $req['status'] === 'pending')); ?> Request<?php echo count(array_filter($leaveRequests, fn($req) => $req['status'] === 'pending')) !== 1 ? 's' : ''; ?></p>
+                                    <div class="card-title">Pending Requests</div>
+                                    <div class="card-value">
+                                        <?php
+                                        $pending = array_filter($leaveRequests, fn($req) => $req['status'] === 'pending');
+                                        $pendingCount = count($pending);
+                                        ?>
+                                        <?php echo $pendingCount; ?> Request<?php echo $pendingCount !== 1 ? 's' : ''; ?>
+                                    </div>
                                 </div>
                             </div>
                         </a>
-                        <a href="../views/approved_requests.php" class="card-link-wrapper">
-                            <div class="card background-white shadow">
+
+                        <a href="leave_history.php?status=approved" class="card-link-wrapper">
+                            <div class="card">
                                 <div class="card-icon">
                                     <i class="fas fa-check-circle"></i>
                                 </div>
                                 <div class="card-content">
-                                    <h3 class="card-title">Approved Requests</h3>
-                                    <?php
-                                    $approved = array_filter($leaveRequests, fn($req) => $req['status'] === 'approved');
-                                    $approvedCount = count($approved);
-                                    ?>
-                                    <p class="card-value"><?php echo $approvedCount; ?> Request<?php echo $approvedCount !== 1 ? 's' : ''; ?></p>
+                                    <div class="card-title">Approved Requests</div>
+                                    <div class="card-value">
+                                        <?php
+                                        $approved = array_filter($leaveRequests, fn($req) => $req['status'] === 'approved');
+                                        $approvedCount = count($approved);
+                                        ?>
+                                        <?php echo $approvedCount; ?> Request<?php echo $approvedCount !== 1 ? 's' : ''; ?>
+                                    </div>
                                 </div>
                             </div>
                         </a>
-                        <a href="../views/leave_history.php" class="card-link-wrapper">
-                            <div class="card background-white shadow">
+
+                        <a href="leave_history.php" class="card-link-wrapper">
+                            <div class="card">
                                 <div class="card-icon">
-                                    <i class="fas fa-folder-open"></i>
+                                    <i class="fas fa-history"></i>
                                 </div>
                                 <div class="card-content">
-                                    <h3 class="card-title">Leave History</h3>
-                                    <p class="card-value">View All</p>
+                                    <div class="card-title">Leave History</div>
+                                    <div class="card-value">View All</div>
                                 </div>
                             </div>
                         </a>

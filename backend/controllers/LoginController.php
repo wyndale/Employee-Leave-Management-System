@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../frontend/models/Auth.php';
+require_once __DIR__ . '/../models/Auth.php';
 require_once __DIR__ . '/../src/Session.php';
 require_once __DIR__ . '/../utils/redirect.php';
 
@@ -26,11 +26,6 @@ class LoginController {
         $stmt->execute([$employeeId, $action, $details, $ipAddress, $userAgent]);
     }
 
-    private function addNotification($employeeId, $message) {
-        $stmt = $this->pdo->prepare("INSERT INTO notifications (employee_id, message, status, created_at) VALUES (?, ?, 'pending', NOW())");
-        $stmt->execute([$employeeId, $message]);
-    }
-
     public function handleLogin() {
         $error = '';
         $showChangePasswordForm = false;
@@ -50,7 +45,6 @@ class LoginController {
 
                 // Log the auto-login event
                 $this->logAudit($userId, 'auto_login', 'User auto-logged in via remember token');
-                $this->addNotification($userId, 'You were automatically logged in.');
 
                 if ($role === 'employee' && $firstLogin) {
                     $showChangePasswordForm = true;
@@ -118,7 +112,6 @@ class LoginController {
                 if ($newPassword === $confirmPassword && $newPassword !== '') {
                     if ($this->auth->updatePassword($userId, $newPassword)) {
                         $this->logAudit($userId, 'password_change', 'User changed their password');
-                        $this->addNotification($userId, 'Your password has been updated successfully.');
                         redirect($this->baseUrl . '/frontend/views/employee_dashboard.php', 'Password updated successfully!', 'success');
                     } else {
                         redirect($this->baseUrl . '/frontend/public/login.php', 'Failed to update password. Please try again.', 'error');
@@ -155,7 +148,6 @@ class LoginController {
 
                     $userId = Session::get('user_id');
                     $this->logAudit($userId, 'login_success', 'User logged in successfully');
-                    $this->addNotification($userId, 'You have successfully logged in.');
 
                     if (isset($_POST['remember_me'])) {
                         $token = $this->auth->generateRememberToken($userId);

@@ -1,0 +1,513 @@
+<?php
+require_once __DIR__ . '/../../backend/src/Session.php';
+require_once __DIR__ . '/../../backend/controllers/EmployeeDashboardController.php';
+
+Session::start();
+Session::requireLogin();
+$employeeId = Session::get('user_id');
+$controller = new EmployeeDashboardController();
+$employee = $controller->getEmployee($employeeId);
+$notifications = $controller->getNotifications($employeeId);
+$unreadCount = $controller->getUnreadNotificationCount($employeeId);
+
+$status = $_GET['status'] ?? '';
+$startDate = $_GET['start_date'] ?? '';
+$endDate = $_GET['end_date'] ?? '';
+$leaveType = $_GET['leave_type'] ?? '';
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$perPage = 10;
+
+$leaveHistory = $controller->leaveModel->getLeaveHistory($employeeId, $status, $startDate, $endDate, $leaveType, $page, $perPage);
+$totalRecords = $controller->leaveModel->getTotalLeaveHistoryCount($employeeId, $status, $startDate, $endDate, $leaveType);
+$totalPages = ceil($totalRecords / $perPage);
+
+$message = Session::get('message');
+$messageType = Session::get('message_type');
+Session::set('message', null);
+Session::set('message_type', null);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave History - Leave Management System</title>
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body class="background-gradient font-poppins">
+    <div class="container full-height">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar sidebar-collapsed">
+            <div class="sidebar-header">
+                <button id="sidebar-toggle" class="sidebar-toggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="employee_dashboard.php" class="sidebar-link">
+                    <i class="fas fa-home"></i><span class="sidebar-text">Dashboard</span>
+                </a>
+                <a href="leave_submission.php" class="sidebar-link">
+                    <i class="fas fa-file-signature"></i><span class="sidebar-text">Leave Submission</span>
+                </a>
+                <a href="leave_history.php" class="sidebar-link active">
+                    <i class="fas fa-folder-open"></i><span class="sidebar-text">Leave History</span>
+                </a>
+                <a href="#settings" class="sidebar-link sidebar-link-bottom">
+                    <i class="fas fa-cog"></i><span class="sidebar-text">Settings</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Header -->
+            <header class="header background-gradient-light">
+                <div class="header-center">
+                    <div class="search-bar">
+                        <i class="fas fa-search search-icon"></i>
+                        <form action="/employee-leave-management-system/backend/controllers/SearchController.php"
+                            method="GET" class="search-form">
+                            <input type="text" id="search-input" name="query" placeholder="Search..."
+                                class="search-input">
+                        </form>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="notification-container">
+                        <button id="notification-toggle" class="notification-button">
+                            <i class="fas fa-bell"></i>
+                            <?php if ($unreadCount > 0): ?>
+                                <span class="notification-badge"><?php echo $unreadCount; ?></span>
+                            <?php endif; ?>
+                        </button>
+                        <div id="notification-dropdown" class="notification-dropdown background-white shadow hidden">
+                            <div class="notification-header">
+                                <h3>Notifications</h3>
+                            </div>
+                            <div id="notification-list">
+                                <?php foreach ($notifications as $notification): ?>
+                                    <div class="notification-item"
+                                        data-id="<?php echo $notification['notification_id']; ?>">
+                                        <p><?php echo htmlspecialchars($notification['message']); ?></p>
+                                        <span
+                                            class="notification-time"><?php echo date('d M Y, H:i', strtotime($notification['created_at'])); ?></span>
+                                    </div>
+                                <?php endforeach; ?>
+                                <?php if (empty($notifications)): ?>
+                                    <p class="no-notifications">No notifications available.</p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="profile-container">
+                        <button id="profile-toggle" class="profile-button">
+                            <img src="/employee-leave-management-system/frontend/assets/img/profile.png" alt="Profile"
+                                class="profile-image">
+                            <span
+                                class="profile-name"><?php echo htmlspecialchars($employee['first_name'] ?? 'Unknown'); ?></span>
+                        </button>
+                        <div id="profile-dropdown" class="profile-dropdown background-white shadow hidden">
+                            <a href="/employee-leave-management-system/views/account_settings.php"
+                                class="dropdown-item">Account Settings</a>
+                            <a href="/employee-leave-management-system/backend/controllers/LogoutController.php?action=logout"
+                                class="dropdown-item">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Toast Container -->
+            <div id="toast-container" class="toast-container">
+                <?php if ($message): ?>
+                    <div class="toast toast-<?php echo $messageType === 'success' ? 'success' : 'error'; ?>">
+                        <span><?php echo htmlspecialchars($message); ?></span>
+                        <?php if ($messageType !== 'success'): ?>
+                            <button class="toast-close">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Leave History -->
+            <main class="main padding-20">
+                <div class="greeting-text">
+                    <h1 class="greeting-title">Leave History</h1>
+                </div>
+                <div class="form-container">
+                    <form method="GET" class="leave-form">
+                        <div class="form-group">
+                            <label for="status">Status:</label>
+                            <select id="status" name="status" class="form-input" placeholder="Select...">
+                                <option value="">All</option>
+                                <option value="pending" <?php echo $status === 'pending' ? 'selected' : ''; ?>>Pending
+                                </option>
+                                <option value="approved" <?php echo $status === 'approved' ? 'selected' : ''; ?>>Approved
+                                </option>
+                                <option value="rejected" <?php echo $status === 'rejected' ? 'selected' : ''; ?>>Rejected
+                                </option>
+                                <option value="cancelled" <?php echo $status === 'cancelled' ? 'selected' : ''; ?>>
+                                    Cancelled</option>
+                                <option value="expired" <?php echo $status === 'expired' ? 'selected' : ''; ?>>Expired
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="start_date">Start Date:</label>
+                            <input type="date" id="start_date" name="start_date" class="form-input"
+                                value="<?php echo htmlspecialchars($startDate); ?>" placeholder="Select date">
+                        </div>
+                        <div class="form-group">
+                            <label for="end_date">End Date:</label>
+                            <input type="date" id="end_date" name="end_date" class="form-input"
+                                value="<?php echo htmlspecialchars($endDate); ?>" placeholder="Select date">
+                        </div>
+                        <div class="form-group">
+                            <label for="leave_type">Leave Type:</label>
+                            <select id="leave_type" name="leave_type" class="form-input" placeholder="Select...">
+                                <option value="">All</option>
+                                <?php
+                                $leaveTypes = $controller->leaveModel->getAllLeaveTypes();
+                                foreach ($leaveTypes as $type): ?>
+                                    <option value="<?php echo htmlspecialchars($type['name']); ?>" <?php echo $leaveType === $type['name'] ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars(ucfirst($type['name'])); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit" class="submit-button">Filter</button>
+                            <button type="button" class="clear-button">Clear</button>
+                        </div>
+                    </form>
+                    <div class="loading-spinner hidden"></div>
+                </div>
+                <div class="card-container">
+                    <div class="card">
+                        <div class="card-content">
+                            <table class="leave-table">
+                                <thead>
+                                    <tr>
+                                        <th>Leave Type</th>
+                                        <th>Status</th>
+                                        <th>Dates</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (!empty($leaveHistory)): ?>
+                                        <?php foreach ($leaveHistory as $index => $request): ?>
+                                            <tr class="<?php echo $index % 2 === 0 ? 'row-even' : 'row-odd'; ?>">
+                                                <td><?php echo htmlspecialchars(ucfirst($request['leave_type_name'])); ?></td>
+                                                <td><?php echo htmlspecialchars(ucfirst($request['status'])); ?></td>
+                                                <td>
+                                                    <?php echo date('d M Y', strtotime($request['start_date'])) . ' to ' . date('d M Y', strtotime($request['end_date'])); ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <tr>
+                                            <td colspan="3">No leave history available.</td>
+                                        </tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                            <!-- Pagination -->
+                            <div class="pagination">
+                                <?php if ($totalPages > 1): ?>
+                                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                        <a href="?page=<?php echo $i; ?>&status=<?php echo urlencode($status); ?>&start_date=<?php echo urlencode($startDate); ?>&end_date=<?php echo urlencode($endDate); ?>&leave_type=<?php echo urlencode($leaveType); ?>"
+                                            class="pagination-link <?php echo $page === $i ? 'active' : ''; ?>">
+                                            <?php echo $i; ?>
+                                        </a>
+                                    <?php endfor; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="../assets/js/dashboard.js"></script>
+    <style>
+        /* Pagination */
+        .pagination {
+            margin-top: 2rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .pagination a {
+            padding: 0.5rem 1rem;
+            text-decoration: none;
+            color: #4a90e2;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            transition: background 0.3s ease;
+        }
+
+        .pagination a.active {
+            background: #4a90e2;
+            color: #ffffff;
+        }
+
+        .pagination a:hover {
+            background: #e0e7ff;
+        }
+
+        /* Filter Form */
+        .leave-form {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            background: #f9fafb;
+            border-radius: 0.5rem;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .form-container {
+            margin-bottom: 1rem;
+            position: relative;
+            display: flex;
+            justify-content: center;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .form-group label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+            box-sizing: border-box;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .submit-button,
+        .clear-button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.3s ease;
+        }
+
+        .submit-button {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .submit-button:hover {
+            background-color: #357abd;
+        }
+
+        .clear-button {
+            background-color: #e5e7eb;
+            color: #6b7280;
+        }
+
+        .clear-button:hover {
+            background-color: #d1d5db;
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #4a90e2;
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .loading-spinner.hidden {
+            display: none;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        /* Table and Card */
+        .card-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            margin-top: 0.5rem;
+            position: relative;
+            width: 100%;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-content {
+            padding: 1rem;
+            padding-bottom: 2rem;
+        }
+
+        .leave-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .leave-table th {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #374151;
+            padding: 0.75rem;
+            text-align: center;
+            background: #f3f4f6;
+        }
+
+        .leave-table td {
+            font-size: 0.875rem;
+            color: #1f2937;
+            padding: 0.75rem;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .leave-table tr.row-even {
+            background: #ffffff;
+        }
+
+        .leave-table tr.row-odd {
+            background: #f9fafb;
+        }
+
+        .leave-table tr:hover {
+            background: #f1f5f9;
+        }
+
+        .leave-table td[colspan="3"] {
+            font-style: italic;
+            color: #6b7280;
+        }
+
+        /* Responsive Design */
+        @media (min-width: 640px) {
+            .leave-form {
+                flex-direction: row;
+                align-items: flex-end;
+                gap: 1rem;
+                padding: 0.5rem 1rem;
+            }
+
+            .form-group {
+                flex-direction: row;
+                align-items: center;
+                gap: 0.5rem;
+                flex: 1;
+            }
+
+            .form-input {
+                max-width: 120px;
+            }
+
+            .button-group {
+                flex-shrink: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .form-input {
+                width: 100%;
+            }
+
+            .submit-button,
+            .clear-button {
+                width: 100%;
+                text-align: center;
+            }
+
+            .leave-table {
+                font-size: 0.75rem;
+            }
+
+            .leave-table th,
+            .leave-table td {
+                padding: 0.5rem;
+            }
+
+            .card {
+                margin: 0 0.5rem;
+            }
+        }
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('.leave-form');
+            const clearButton = document.querySelector('.clear-button');
+            const spinner = document.querySelector('.loading-spinner');
+
+            // Show spinner on form submit
+            form.addEventListener('submit', () => {
+                spinner.classList.remove('hidden');
+                setTimeout(() => {
+                    spinner.classList.add('hidden');
+                }, 1000); // Simulated delay for demo
+            });
+
+            // Clear form and reload page
+            clearButton.addEventListener('click', () => {
+                form.reset();
+                window.location.href = 'leave_history.php';
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../frontend/models/Auth.php';
+require_once __DIR__ . '/../models/Auth.php';
 require_once __DIR__ . '/../src/Session.php';
 require_once __DIR__ . '/../utils/redirect.php';
 

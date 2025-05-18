@@ -1,30 +1,52 @@
-/Employee-Leave-Management-System
-├── access/                      → Authentication and access control scripts
+EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
+│
+├── access/
+│
 ├── backend/
-│   ├── controllers/            → Handles business logic and request processing
+│   ├── controllers/
 │   │   ├── EmployeeDashboardController.php
+│   │   ├── LeaveSubmissionController.php
 │   │   ├── LoginController.php
 │   │   └── LogoutController.php
-│   ├── middlewares/           → Middleware logic for session/auth checking
+│   │
+│   ├── middlewares/
 │   │   └── AuthMiddleware.php
-│   ├── src/                    → Reserved for application logic/helpers
-│   └── utils/                  → Utility functions (can be expanded)
+│   │
+│   ├── src/
+│   │   ├── Database.php
+│   │   └── Session.php
+│   │
+│   └── utils/
+│       └── redirect.php
+│
 ├── frontend/
 │   ├── assets/
-│   │   ├── css/               → CSS files like dashboard.css, login.css
-│   │   ├── img/               → Image assets
-│   │   ├── imports/           → CSV file for mock data from HR
-│   │   └── js/                → JavaScript files
-├── models/                     → PHP model files (database operations)
+│   │   ├── css/
+│   │   │   ├── dashboard.css
+│   │   │   └── login.css
+│   │   ├── img/
+│   │   │   └── login illustration image
+│   │   ├── imports/
+│   │   │   └── [integrated mock HR data source]
+│   │   └── js/
+│   │       ├── dashboard.js
+│   │       ├── login.js
+│   │       └── password_validation.js
+│
+├── models/
 │   ├── Auth.php
 │   └── LeaveModel.php
+│
 ├── public/
-│   └── login.php              → Login entry script
+│   └── login.php
+│
 ├── views/
-│   ├── login_view.php         → Login UI view
-│   └── employee_dashboard.php
-│      
-├── tests/ 
+│   ├── employee_dashboard.php
+│   ├── leave_submission.php
+│   └── login_view.php
+│
+├── tests/
+│
 ├── .gitignore
 ├── .htaccess
 ├── index.php
