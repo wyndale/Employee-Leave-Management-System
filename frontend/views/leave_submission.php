@@ -9,7 +9,7 @@ Session::validate();
 
 // Check if user is logged in and is an employee
 if (!Session::isLoggedIn() || Session::getRole() !== 'employee') {
-    redirect('/', 'Please log in to access this page.', 'error');
+    redirect('/employee-leave-management-system', 'Please log in to access this page.', 'error');
 }
 
 // Generate CSRF token if not set
@@ -29,24 +29,6 @@ $leaveTypeStmt = $db->prepare("SELECT name, eligibility_criteria FROM leave_type
 $leaveTypeStmt->execute();
 $leaveTypes = $leaveTypeStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Fetch notifications for the employee
-function getNotifications($employeeId) {
-    $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("SELECT notification_id, message, created_at, status FROM notifications WHERE employee_id = ? ORDER BY created_at DESC");
-    $stmt->execute([$employeeId]);
-    return $stmt->fetchAll();
-}
-
-function getUnreadNotificationCount($employeeId) {
-    $db = Database::getInstance()->getConnection();
-    $stmt = $db->prepare("SELECT COUNT(*) FROM notifications WHERE employee_id = ? AND status = 'pending'");
-    $stmt->execute([$employeeId]);
-    return (int)$stmt->fetchColumn();
-}
-
-$notifications = getNotifications($employeeId);
-$unreadCount = getUnreadNotificationCount($employeeId);
-
 $message = Session::get('message');
 $messageType = Session::get('message_type');
 Session::set('message', null);
@@ -62,6 +44,70 @@ Session::set('message_type', null);
     <link rel="stylesheet" href="../assets/css/dashboard.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            position: relative;
+        }
+        .notification-item.sent {
+            background-color: #f9f9f9;
+            opacity: 0.7;
+        }
+        .notification-item .notification-actions {
+            margin-top: 5px;
+            display: flex;
+            gap: 10px;
+        }
+        .notification-item .notification-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.2s ease;
+        }
+        .notification-item .mark-read {
+            background: #28a745;
+            color: white;
+        }
+        .notification-item .delete {
+            background: #dc3545;
+            color: white;
+        }
+        .notification-item .mark-read:hover, .notification-item .delete:hover {
+            opacity: 0.9;
+        }
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .notification-header .delete-all {
+            background: #dc3545;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .notification-header .delete-all:hover {
+            opacity: 0.9;
+        }
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 0.8rem;
+        }
+    </style>
 </head>
 <body class="background-gradient font-poppins">
     <div class="container full-height">
@@ -104,25 +150,14 @@ Session::set('message_type', null);
                     <div class="notification-container">
                         <button id="notification-toggle" class="notification-button">
                             <i class="fas fa-bell"></i>
-                            <?php if ($unreadCount > 0): ?>
-                                <span class="notification-badge"><?php echo $unreadCount; ?></span>
-                            <?php endif; ?>
+                            <span id="notification-badge" class="notification-badge" style="display: none;"></span>
                         </button>
                         <div id="notification-dropdown" class="notification-dropdown background-white shadow hidden">
                             <div class="notification-header">
                                 <h3>Notifications</h3>
+                                <button id="delete-all-notifications" class="delete-all">Delete All</button>
                             </div>
-                            <div id="notification-list">
-                                <?php foreach ($notifications as $notification): ?>
-                                    <div class="notification-item" data-id="<?php echo $notification['notification_id']; ?>">
-                                        <p><?php echo htmlspecialchars($notification['message']); ?></p>
-                                        <span class="notification-time"><?php echo date('d M Y, H:i', strtotime($notification['created_at'])); ?></span>
-                                    </div>
-                                <?php endforeach; ?>
-                                <?php if (empty($notifications)): ?>
-                                    <p class="no-notifications">No notifications available.</p>
-                                <?php endif; ?>
-                            </div>
+                            <div id="notification-list"></div>
                         </div>
                     </div>
                     <div class="profile-container">
@@ -141,13 +176,8 @@ Session::set('message_type', null);
             <!-- Toast Container -->
             <div id="toast-container" class="toast-container">
                 <?php if ($message): ?>
-                    <div class="toast toast-<?php echo $messageType === 'success' ? 'success' : 'error'; ?>">
+                    <div class="toast toast-<?php echo $messageType === 'success' ? 'success' : 'error'; ?> visible">
                         <span><?php echo htmlspecialchars($message); ?></span>
-                        <?php if ($messageType !== 'success'): ?>
-                            <button class="toast-close">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        <?php endif; ?>
                     </div>
                 <?php endif; ?>
             </div>
@@ -158,7 +188,7 @@ Session::set('message_type', null);
                     <h1 class="greeting-title">Leave Request Submission</h1>
                 </div>
                 <div class="form-container">
-                    <form id="leaveSubmissionForm" action="/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php?action=submit" method="POST" class="leave-form">
+                    <form id="leaveSubmissionForm" class="leave-form">
                         <input type="hidden" name="csrf_token" value="<?php echo Session::get('csrf_token'); ?>">
                         <input type="hidden" name="action" value="submit">
                         <div class="form-group">
@@ -194,44 +224,210 @@ Session::set('message_type', null);
     <script src="../assets/js/dashboard.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Show toast notification
+            function showToast(message, type) {
+                const toast = document.createElement('div');
+                toast.className = `toast toast-${type} visible`;
+                toast.innerHTML = `<span>${message}</span>`;
+                document.getElementById('toast-container').appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.remove('visible');
+                    setTimeout(() => toast.remove(), 300);
+                }, 5000);
+            }
+
+            // Update notifications
+            function updateNotifications() {
+                fetch('/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'get_notifications' })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const notificationList = document.getElementById('notification-list');
+                        const badge = document.getElementById('notification-badge');
+                        notificationList.innerHTML = '';
+                        if (data.notifications.length === 0) {
+                            notificationList.innerHTML = '<p class="no-notifications">No notifications available.</p>';
+                            badge.style.display = 'none';
+                        } else {
+                            data.notifications.forEach(notification => {
+                                const div = document.createElement('div');
+                                div.className = `notification-item ${notification.status === 'sent' ? 'sent' : ''}`;
+                                div.dataset.id = notification.notification_id;
+                                div.innerHTML = `
+                                    <p>${notification.message}</p>
+                                    <span class="notification-time">${new Date(notification.created_at).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                    <div class="notification-actions">
+                                        ${notification.status === 'pending' ? `<button class="mark-read">Mark as Read</button>` : ''}
+                                        <button class="delete">Delete</button>
+                                    </div>
+                                `;
+                                notificationList.appendChild(div);
+                            });
+                            badge.textContent = data.unreadCount;
+                            badge.style.display = data.unreadCount > 0 ? 'block' : 'none';
+                        }
+                    } else {
+                        showToast(data.message || 'Error fetching notifications', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching notifications:', error);
+                    showToast('Error fetching notifications', 'error');
+                });
+            }
+
+            // Poll for notifications every 10 seconds
+            updateNotifications();
+            setInterval(updateNotifications, 10000);
+
+            // Handle notification actions
+            document.getElementById('notification-list').addEventListener('click', (e) => {
+                const target = e.target;
+                const notificationItem = target.closest('.notification-item');
+                if (!notificationItem) return;
+                const notificationId = notificationItem.dataset.id;
+
+                if (target.classList.contains('mark-read')) {
+                    fetch('/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'mark_read', notification_id: notificationId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message, 'success');
+                            updateNotifications();
+                        } else {
+                            showToast(data.message || 'Error marking notification as read', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error marking notification as read:', error);
+                        showToast('Error marking notification as read', 'error');
+                    });
+                } else if (target.classList.contains('delete')) {
+                    fetch('/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_notification', notification_id: notificationId })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message, 'success');
+                            updateNotifications();
+                        } else {
+                            showToast(data.message || 'Error deleting notification', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting notification:', error);
+                        showToast('Error deleting notification', 'error');
+                    });
+                }
+            });
+
+            // Handle delete all notifications
+            document.getElementById('delete-all-notifications').addEventListener('click', () => {
+                if (confirm('Are you sure you want to delete all notifications?')) {
+                    fetch('/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'delete_all' })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message, 'success');
+                            updateNotifications();
+                        } else {
+                            showToast(data.message || 'Error deleting all notifications', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error deleting all notifications:', error);
+                        showToast('Error deleting all notifications', 'error');
+                    });
+                }
+            });
+
+            // Form submission with fetch
             const form = document.getElementById('leaveSubmissionForm');
-            console.log('Form loaded:', form); // Debug: Confirm form is found
             if (form) {
                 form.addEventListener('submit', (e) => {
-                    console.log('Submit event triggered'); // Debug: Confirm event listener works
-                    const startDateInput = document.getElementById('startDate');
-                    const endDateInput = document.getElementById('endDate');
-                    const startDate = new Date(startDateInput.value);
-                    const endDate = new Date(endDateInput.value);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0); // Normalize to midnight for comparison
+                    e.preventDefault();
+                    console.log('Submit event triggered');
 
-                    console.log('Start Date:', startDate, 'End Date:', endDate, 'Today:', today); // Debug: Log dates
+                    const leaveType = document.getElementById('leaveType').value;
+                    const startDate = document.getElementById('startDate').value;
+                    const endDate = document.getElementById('endDate').value;
+                    const reason = document.getElementById('reason').value;
+                    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
+                    const startDateObj = new Date(startDate);
+                    const endDateObj = new Date(endDate);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
 
                     let hasError = false;
 
-                    if (!startDateInput.value || !endDateInput.value) {
-                        e.preventDefault();
-                        showToast('Please select both start and end dates.', 'error');
+                    if (!leaveType || !startDate || !endDate || !reason) {
+                        showToast('Please fill in all required fields.', 'error');
                         hasError = true;
-                        console.log('Validation failed: Missing dates');
-                    } else {
-                        if (startDate < today) {
-                            e.preventDefault();
-                            showToast('Start date cannot be in the past. Please select a future date.', 'error');
-                            hasError = true;
-                            console.log('Validation failed: Start date in the past');
-                        }
-                        if (startDate > endDate) {
-                            e.preventDefault();
-                            showToast('End date must be after start date. Please adjust the dates.', 'error');
-                            hasError = true;
-                            console.log('Validation failed: End date before start date');
-                        }
+                        console.log('Validation failed: Missing fields');
+                    } else if (startDateObj < today) {
+                        showToast('Start date cannot be in the past. Please select a future date.', 'error');
+                        hasError = true;
+                        console.log('Validation failed: Start date in the past');
+                    } else if (startDateObj > endDateObj) {
+                        showToast('End date must be after start date. Please adjust the dates.', 'error');
+                        hasError = true;
+                        console.log('Validation failed: End date before start date');
                     }
 
-                    if (hasError) {
-                        e.preventDefault(); // Ensure form doesn’t submit if any validation fails
+                    if (!hasError) {
+                        fetch('/employee-leave-management-system/backend/controllers/LeaveSubmissionController.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'submit',
+                                csrf_token: csrfToken,
+                                leaveType,
+                                startDate,
+                                endDate,
+                                reason
+                            })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(data => {
+                                    throw new Error(data.message || `HTTP error! status: ${response.status}`);
+                                });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                                form.reset();
+                            } else {
+                                showToast(data.message || 'Error submitting leave request', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error submitting form:', error);
+                            showToast('Error submitting leave request: ' + error.message, 'error');
+                        });
                     }
                 });
             }
