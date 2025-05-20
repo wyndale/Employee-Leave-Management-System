@@ -212,6 +212,7 @@ EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
 
 ## Future Enhancements
 Based on the current implementation, the following enhancements can improve functionality, usability, and scalability:
+- **File Upload for Leave Requests**: Enhance leave_submission.php to allow employees to upload supporting documents (e.g., medical certificates for Sick Leave or travel plans for Vacation) when submitting leave requests. This would involve adding a file input field to the form, validating file types (e.g., PDF, JPG) and size limits in LeaveSubmissionController.php, and storing files securely in a designated directory with references in the leave_requests table. Managers could view these files via manage_requests.php to verify requirements for specific leave types (e.g., Maternity Leave), ensuring compliance with organizational policies.
 - **Real-Time Notifications**: Replace simulated notifications with email and SMS alerts for request submissions, approvals, and rejections, integrating with services like SendGrid or Twilio.
 - **Advanced Reporting Analytics**: Add predictive leave trend analysis, cross-department comparisons, and yearly summaries, with interactive dashboards using tools like D3.js.
 - **Progressive Web App (PWA)**: Implement a PWA to leverage the responsive design, enabling offline access, push notifications, and a native-like experience on mobile devices without separate app development.
