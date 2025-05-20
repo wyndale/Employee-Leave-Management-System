@@ -147,7 +147,7 @@ EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
 ├── logs/
 │   ├── imported_default_password.log
 ├── tests/
-├── database.sql
+├── leave_management.sql
 ├── .gitignore
 ├── index.php
 ├── README.md
