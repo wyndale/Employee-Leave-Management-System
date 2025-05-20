@@ -70,6 +70,7 @@ The system follows a [3-tier architecture](#key-files-and-their-functionalities)
    ```bash
    git clone https://github.com/your-group-repo/leave-management-system.git
    ```
+   - Must rename the folder (master) to employee-leave-management-system
 2. **Install Dependencies**:
    - Install Apache web server and PHP 8.2.12.
    - Install MariaDB 10.4.32 (or MySQL equivalent) for the database.
@@ -83,7 +84,7 @@ The system follows a [3-tier architecture](#key-files-and-their-functionalities)
 4. **Configure Integration**:
    - Place the mock HR CSV file (e.g., `employees.csv`) in [frontend/assets/imports/](#key-files-and-their-functionalities).
 5. **Run the Application**:
-   - Deploy to Apache and access via `http://localhost/leave-management-system/frontend/public/login.php`.
+   - Deploy to Apache and access via `http://localhost/employee-leave-management-system/frontend/public/login.php`.
 6. **Access the System**:
    - Log in using the manager account (`user@example.com`) to test features, including CSV imports via [hr_import.php](#key-files-and-their-functionalities).
 
