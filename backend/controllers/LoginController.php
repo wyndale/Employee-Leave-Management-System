@@ -46,13 +46,13 @@ class LoginController {
                 // Log the auto-login event
                 $this->logAudit($userId, 'auto_login', 'User auto-logged in via remember token');
 
-                if ($role === 'employee' && $firstLogin) {
+                if ($firstLogin) {
                     $showChangePasswordForm = true;
                     $email = Session::get('email');
                 } else {
                     $redirectUrl = $role === 'employee' 
                         ? $this->baseUrl . '/frontend/views/employee_dashboard.php'
-                        : $this->baseUrl . '/frontend/views/manager_dashboard.php';
+                        : $this->baseUrl . '/frontend/views/manager/manager_dashboard.php';
                     redirect($redirectUrl, 'Welcome back! You were automatically logged in.', 'success');
                 }
             } else {
@@ -67,12 +67,12 @@ class LoginController {
             $firstLogin = Session::get('first_login');
             $email = Session::get('email');
 
-            if ($role === 'employee' && $firstLogin) {
+            if ($firstLogin) {
                 $showChangePasswordForm = true;
             } else {
                 $redirectUrl = $role === 'employee' 
                     ? $this->baseUrl . '/frontend/views/employee_dashboard.php'
-                    : $this->baseUrl . '/frontend/views/manager_dashboard.php';
+                    : $this->baseUrl . '/frontend/views/manager/manager_dashboard.php';
                 redirect($redirectUrl, 'You are already logged in.');
             }
         }
@@ -112,7 +112,10 @@ class LoginController {
                 if ($newPassword === $confirmPassword && $newPassword !== '') {
                     if ($this->auth->updatePassword($userId, $newPassword)) {
                         $this->logAudit($userId, 'password_change', 'User changed their password');
-                        redirect($this->baseUrl . '/frontend/views/employee_dashboard.php', 'Password updated successfully!', 'success');
+                        $redirectUrl = Session::getRole() === 'employee' 
+                            ? $this->baseUrl . '/frontend/views/employee_dashboard.php'
+                            : $this->baseUrl . '/frontend/views/manager/manager_dashboard.php';
+                        redirect($redirectUrl, 'Password updated successfully!', 'success');
                     } else {
                         redirect($this->baseUrl . '/frontend/public/login.php', 'Failed to update password. Please try again.', 'error');
                     }
@@ -154,12 +157,12 @@ class LoginController {
                         setcookie('remember_token', $token, time() + (30 * 24 * 60 * 60), '/', '', true, true);
                     }
 
-                    if ($role === 'employee' && $firstLogin) {
+                    if ($firstLogin) {
                         $showChangePasswordForm = true;
                     } else {
                         $redirectUrl = $role === 'employee' 
                             ? $this->baseUrl . '/frontend/views/employee_dashboard.php'
-                            : $this->baseUrl . '/frontend/views/manager_dashboard.php';
+                            : $this->baseUrl . '/frontend/views/manager/manager_dashboard.php';
                         redirect($redirectUrl, 'Login successful!');
                     }
                 } else {
@@ -194,3 +197,4 @@ class LoginController {
         ];
     }
 }
+?>

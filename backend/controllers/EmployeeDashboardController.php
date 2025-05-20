@@ -12,8 +12,8 @@ class EmployeeDashboardController {
 
     public function __construct() {
         $this->auth = new Auth();
-        $this->leaveModel = new LeaveModel();
         $this->pdo = Database::getInstance()->getConnection();
+        $this->leaveModel = new LeaveModel(Database::getInstance());
     }
 
     private function logAudit($employeeId, $action, $details) {
@@ -36,15 +36,66 @@ class EmployeeDashboardController {
     }
 
     public function getNotifications($employeeId) {
-        $stmt = $this->pdo->prepare("SELECT notification_id, message, created_at FROM notifications WHERE employee_id = ? ORDER BY created_at DESC");
-        $stmt->execute([$employeeId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT notification_id, message, created_at, status 
+                FROM notifications 
+                WHERE employee_id = ? 
+                ORDER BY created_at DESC
+            ");
+            $stmt->execute([$employeeId]);
+            $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $unreadCount = $this->pdo->prepare("SELECT COUNT(*) FROM notifications WHERE employee_id = ? AND status = 'pending'");
+            $unreadCount->execute([$employeeId]);
+            $unread = (int)$unreadCount->fetchColumn();
+            return ['success' => true, 'notifications' => $notifications, 'unreadCount' => $unread];
+        } catch (Exception $e) {
+            error_log("getNotifications error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error fetching notifications: ' . $e->getMessage()];
+        }
     }
 
-    public function getUnreadNotificationCount($employeeId) {
-        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM notifications WHERE employee_id = ? AND status = 'pending'");
-        $stmt->execute([$employeeId]);
-        return (int)$stmt->fetchColumn();
+    public function markNotificationAsRead($notificationId, $employeeId) {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE notifications 
+                SET status = 'sent' 
+                WHERE notification_id = ? AND employee_id = ?
+            ");
+            $stmt->execute([$notificationId, $employeeId]);
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Notification not found or not authorized');
+            }
+            return ['success' => true, 'message' => 'Notification marked as read'];
+        } catch (Exception $e) {
+            error_log("markNotificationAsRead error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error marking notification as read: ' . $e->getMessage()];
+        }
+    }
+
+    public function deleteAllNotifications($employeeId) {
+        try {
+            $stmt = $this->pdo->prepare("DELETE FROM notifications WHERE employee_id = ?");
+            $stmt->execute([$employeeId]);
+            return ['success' => true, 'message' => 'All notifications deleted'];
+        } catch (Exception $e) {
+            error_log("deleteAllNotifications error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error deleting notifications: ' . $e->getMessage()];
+        }
+    }
+
+    public function deleteNotification($notificationId, $employeeId) {
+        try {
+            $stmt = $this->pdo->prepare("DELETE FROM notifications WHERE notification_id = ? AND employee_id = ?");
+            $stmt->execute([$notificationId, $employeeId]);
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Notification not found or not authorized');
+            }
+            return ['success' => true, 'message' => 'Notification deleted'];
+        } catch (Exception $e) {
+            error_log("deleteNotification error: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Error deleting notification: ' . $e->getMessage()];
+        }
     }
 
     public function getTotalRequestsForYear($employeeId, $year) {
@@ -60,7 +111,7 @@ class EmployeeDashboardController {
             exit;
         }
         $employeeId = Session::get('user_id');
-        $stmt = $this->pdo->prepare("UPDATE notifications SET status = 'read' WHERE employee_id = ? AND status = 'pending'");
+        $stmt = $this->pdo->prepare("UPDATE notifications SET status = 'sent' WHERE employee_id = ? AND status = 'pending'");
         $stmt->execute([$employeeId]);
         echo json_encode(['success' => true, 'message' => 'Notifications marked as read']);
         exit;
@@ -111,14 +162,64 @@ class EmployeeDashboardController {
 }
 
 // Handle AJAX requests
-if (isset($_GET['action'])) {
-    $controller = new EmployeeDashboardController();
-    if ($_GET['action'] === 'mark_notifications_read') {
-        $controller->markNotificationsRead();
-    } elseif ($_GET['action'] === 'update_leave_status' && isset($_POST['request_id']) && isset($_POST['status'])) {
-        $result = $controller->updateLeaveRequestStatus($_POST['request_id'], $_POST['status']);
-        header('Content-Type: application/json');
-        echo json_encode(['success' => $result]);
-        exit;
+Session::start();
+$controller = new EmployeeDashboardController();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    $action = $data['action'] ?? $_GET['action'] ?? '';
+
+    header('Content-Type: application/json; charset=utf-8');
+
+    try {
+        $employeeId = Session::get('user_id');
+        if (!$employeeId) {
+            error_log("EmployeeDashboardController: No employee ID in session");
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Unauthorized: No employee ID in session']);
+            exit;
+        }
+
+        if ($action === 'get_notifications') {
+            $result = $controller->getNotifications($employeeId);
+            echo json_encode($result);
+        } elseif ($action === 'mark_read') {
+            $notificationId = filter_var($data['notification_id'] ?? 0, FILTER_VALIDATE_INT);
+            if ($notificationId === false || $notificationId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid notification ID']);
+                exit;
+            }
+            $result = $controller->markNotificationAsRead($notificationId, $employeeId);
+            echo json_encode($result);
+        } elseif ($action === 'delete_all') {
+            $result = $controller->deleteAllNotifications($employeeId);
+            echo json_encode($result);
+        } elseif ($action === 'delete_notification') {
+            $notificationId = filter_var($data['notification_id'] ?? 0, FILTER_VALIDATE_INT);
+            if ($notificationId === false || $notificationId <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid notification ID']);
+                exit;
+            }
+            $result = $controller->deleteNotification($notificationId, $employeeId);
+            echo json_encode($result);
+        } elseif ($action === 'mark_notifications_read') {
+            $controller->markNotificationsRead();
+        } elseif ($action === 'update_leave_status' && isset($data['request_id']) && isset($data['status'])) {
+            $result = $controller->updateLeaveRequestStatus($data['request_id'], $data['status']);
+            echo json_encode(['success' => $result]);
+        } else {
+            error_log("EmployeeDashboardController: Invalid action: $action");
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Invalid action']);
+        }
+    } catch (Exception $e) {
+        error_log("EmployeeDashboardController: Error processing request: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
     }
+    exit;
 }
+?>

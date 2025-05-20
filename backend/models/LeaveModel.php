@@ -4,14 +4,37 @@ require_once __DIR__ . '/../../backend/src/Database.php';
 class LeaveModel {
     private $db;
 
-    public function __construct() {
-        $this->db = Database::getInstance()->getConnection();
+    public function __construct($db) {
+        $this->db = $db->getConnection();
     }
 
     public function getAllLeaveTypes() {
         $stmt = $this->db->prepare("SELECT * FROM leave_types");
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getRequestsForManager($managerId) {
+        $stmt = $this->db->prepare("
+            SELECT lr.*, e.first_name, e.last_name, lt.name as leave_type_name
+            FROM leave_requests lr
+            JOIN employees e ON lr.employee_id = e.employee_id
+            LEFT JOIN leave_types lt ON lr.leave_type_id = lt.leave_type_id
+            WHERE e.manager_id = ? AND lr.status = 'pending'
+            ORDER BY lr.created_at DESC
+        ");
+        $stmt->execute([$managerId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getSummaryStats() {
+        $stmt = $this->db->prepare("SELECT status, COUNT(*) as count FROM leave_requests GROUP BY status");
+        $stmt->execute();
+        $stats = ['pending' => 0, 'approved' => 0, 'rejected' => 0];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $stats[$row['status']] = $row['count'];
+        }
+        return $stats;
     }
 
     public function getLeaveRequestsByEmployeeId($employeeId) {
@@ -44,7 +67,7 @@ class LeaveModel {
             WHERE employee_id = ? AND leave_type_id = ?
         ");
         $stmt->execute([$employeeId, $leaveTypeId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: ['balance' => 0];
     }
 
     public function createLeaveRequest($data) {
@@ -134,3 +157,4 @@ class LeaveModel {
         return (int)$stmt->fetchColumn();
     }
 }
+?>
