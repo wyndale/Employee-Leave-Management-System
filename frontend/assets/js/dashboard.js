@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => {
                 toast.classList.remove('visible');
                 setTimeout(() => toast.remove(), 300);
-            }, 4000);
+            }, 3000);
         }
     });
 
