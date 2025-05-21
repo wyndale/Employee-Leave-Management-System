@@ -42,7 +42,7 @@ The system follows a [3-tier architecture](#key-files-and-their-functionalities)
 - **Database Layer**: MySQL/MariaDB for data storage, managed via phpMyAdmin.
 
 ### Data Model
-- **Entities** (defined in [database.sql](#key-files-and-their-functionalities)):
+- **Entities** (defined in [leave_management.sql](#key-files-and-their-functionalities)):
   - `employees`: Stores employee details (ID, name, department, role).
   - `leave_requests`: Tracks leave requests (request ID, employee ID, dates, status, duration).
   - `leave_types`: Defines leave types (e.g., vacation, sick leave).
