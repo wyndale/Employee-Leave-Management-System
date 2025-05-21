@@ -123,7 +123,6 @@ EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
 │   │   │   ├── manager_dashboard.css
 │   │   ├── img/
 │   │   │   ├── employees-ill.png
-│   │   │   ├── profile-placeholder.png
 │   │   ├── imports/
 │   │   │   ├── employees.csv
 │   │   ├── js/
@@ -144,6 +143,12 @@ EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
 │   │   ├── leave_history.php
 │   │   ├── leave_submission.php
 │   │   ├── login_view.php
+├── diagrams/
+│   ├── Architecture.pdf
+│   ├── DFD.pdf
+│   ├── ERD.pdf
+├── report/
+│   ├── IM and SIA Project Report.pdf
 ├── logs/
 │   ├── imported_default_password.log
 ├── tests/
