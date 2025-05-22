@@ -149,6 +149,9 @@ EMPLOYEE-LEAVE-MANAGEMENT-SYSTEM/
 │   ├── ERD.pdf
 ├── report/
 │   ├── IM and SIA Project Report.pdf
+├── presentation-slide/
+│   ├── Presentation Slides.odp
+│   ├── Presentation Slides.pdf
 ├── logs/
 │   ├── imported_default_password.log
 ├── tests/
